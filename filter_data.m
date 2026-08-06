@@ -31,11 +31,8 @@ for i = 1:num_sessions
     
     load([projPath 'data/binned/' sessionNames{s} '_binnedFr200_pre3post2.mat']);
     
-    tunp_ = [(bPushedTimes{s}(2:end) - bPushedTimes{s}(1:end-1))/1000 NaN];
-    tslp_ = [NaN (bPushedTimes{s}(2:end) - bPushedTimes{s}(1:end-1))/1000];
-    
     idx = iForag{s}( ...
-        tslp_(iForag{s}) > 2 & tslp_(iForag{s}) < 60 );
+        tslp{s}(iForag{s}) > 2 & tslp{s}(iForag{s}) < 60 );
 
     num_valid = length(idx);
 
@@ -45,8 +42,8 @@ for i = 1:num_sessions
     rew_ = min(rew{s}, 1);
     last_choice = [NaN choice{s}(1:end-1)];
     var_matrix = [
-        tunp_(idx);
-        tslp_(idx);
+        tunp{s}(idx);
+        tslp{s}(idx);
         rewRate{s}(idx);
         rewRatio{s}(idx);
         rew_(idx);
