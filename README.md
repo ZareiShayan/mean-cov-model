@@ -1,258 +1,108 @@
 # Parallel Mean-Covariance Model
 
-This repository implements a **parallel mean-covariance model** for population neural activity recorded from macaque dorsolateral prefrontal cortex (dlPFC) during a freely moving foraging task.
+This project develops a **latent mean-covariance encoding model** for population spiking activity recorded from macaque dorsolateral prefrontal cortex (dlPFC) during a self-paced foraging task, and interprets the fitted model with permutation-based SHAP attribution. The task and neural data follow the paradigm and dataset introduced in *"Population coding of strategic variables during foraging in freely moving macaques."* The covariance component builds on the latent-space modeling approach developed in *"Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling"* (Rene Burghardt, MSc Thesis, University of Göttingen, unpublished).
 
-The project combines a conditional mean model with a low-rank, temporally smooth latent covariance model to investigate how behavioral, spatial, and strategic variables shape both firing rates and shared neural variability.
+---
 
-The dataset is based on the work *Population coding of strategic variables during foraging in freely moving macaques*, which demonstrated that strategic reward variables are represented in macaque dlPFC during naturalistic foraging behavior. The covariance modeling approach is additionally informed by *Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling*, an unpublished M.Sc. thesis by Rene Burghardt at the University of Göttingen.
+## Task and Data
+
+Freely moving macaques performed a self-paced foraging task with two operant buttons delivering probabilistic rewards. For each qualifying button press, single-unit dlPFC activity and animal position were extracted in a window from $$t=-3$$ s to $$t=+2$$ s relative to the press, binned at 200 ms, and later cropped to $$[-2,+2]$$ s for modeling. Each trial is described by a 7-dimensional strategic-variable vector (time since/until press, reward ratio, reward outcome, choice, and last choice) and a time-varying position tensor (x, y, distance to reward, motion).
 
 ---
 
 ## Model
 
-For a trial with behavioral and spatial covariates \(x\), the neural response vector \(y\) is modeled as:
+The framework separates population activity into a **conditional mean** and a **latent, temporally structured covariance**, both computed from behavioral and spatial covariates.
 
-$$
-y \mid x \sim \mathcal{N}\left(\mu_\theta(x), \Sigma_\phi\right)
-$$
+**Baseline model.** A per-bin, per-unit template with identity covariance:
 
-The conditional mean model predicts the expected activity of each unit and time bin:
+$$\mu_{t,u} = \theta_{t,u}$$
 
-$$
-\hat{\mu}(x) = f_\theta(x)
-$$
+**Mean model.** A transformer encoder maps covariates $$x_t$$ into a conditional mean trajectory $$\mu(t,u \mid x)$$, with covariance still fixed to identity:
 
-The covariance model captures structured residual variability after the conditional mean has been fitted. The covariance is represented as a low-rank latent process plus independent noise:
+$$h_t = W_{vars}\, x_t + t2v(t)$$
 
-$$
-\Sigma =
-\sum_{k=1}^{K} \Lambda_k K_k \Lambda_k^{\top}
-+
-\operatorname{diag}(\sigma^2)
-$$
+**Covariance model.** Once the mean model is fit and frozen, a low-rank latent covariance is learned on top of it. Each latent component $$k$$ has a loading matrix $$\Lambda_k$$ and a Gaussian-process temporal kernel:
 
-where:
+$$K_k(t,t') = \exp\!\left(-\frac{(t-t')^2}{2\ell_k^2}\right)$$
 
-- \(\Lambda_k\) contains the loading pattern of latent component \(k\).
-- \(K_k\) is a temporally smooth covariance kernel.
-- \(\sigma^2\) represents unit- and time-specific residual variance.
+The full covariance combines all latent components with a diagonal noise term:
 
-The conditional mean model is trained first and then frozen while the covariance parameters are optimized. Therefore, the covariance model is intended to capture shared neural variability that is not already explained by the conditional mean.
+$$\Sigma = LL^\top, \qquad L \Rightarrow \Sigma = \sum_k \Lambda_k \Lambda_k^\top + \operatorname{diag}(\sigma^2)$$
 
-The joint Gaussian formulation also supports conditional prediction. For target dimensions \(A\) and observed dimensions \(B\):
+**Joint mean-covariance likelihood.** The model outputs $$\mu(x)$$ and $$L$$, defining a trial-wise Gaussian over the flattened bin-unit response vector $$y$$:
 
-$$
-\mathbb{E}[y_A \mid y_B]
-=
-\mu_A
-+
-\Sigma_{AB}\Sigma_{BB}^{-1}(y_B-\mu_B)
-$$
+$$-\log \mathcal{N}(y \mid \mu, \Sigma) = \tfrac{1}{2}(y-\mu)^\top \Sigma^{-1} (y-\mu) + \tfrac{1}{2}\log|\Sigma| + \tfrac{D}{2}\log(2\pi)$$
 
-The corresponding conditional covariance is:
+The mean model is trained first and frozen; the covariance parameters are optimized second, so the latent covariance captures residual structure not already explained by the conditional mean.
 
-$$
-\Sigma_{A\mid B}
-=
-\Sigma_{AA}
--
-\Sigma_{AB}\Sigma_{BB}^{-1}\Sigma_{BA}
-$$
+**Conditional prediction.** Because the model defines a joint Gaussian, it supports conditioning on subsets of dimensions (past bins, other units):
 
-These equations allow neural activity to be predicted from previous activity, other units, or both.
+$$\mu_{A\mid B} = \mu_A + \Sigma_{AB}\Sigma_{BB}^{-1}(y_B-\mu_B), \qquad \Sigma_{A\mid B} = \Sigma_{AA} - \Sigma_{AB}\Sigma_{BB}^{-1}\Sigma_{BA}$$
 
 ---
 
-## Dataset and Variables
+## Interpretability: Permutation SHAP
 
-Freely moving macaques performed a self-paced foraging task in which two operant buttons delivered probabilistic rewards while the animals navigated an enclosure.
+Model interpretability is assessed with **permutation-based Shapley attribution**, allocating each unit's predicted firing-rate change to individual behavioral and spatial features:
 
-Neural activity was recorded from dlPFC and binned at 200 ms around button presses. Each trial contains behavioral, strategic, spatial, and neural variables.
+$$\phi_i(t,u) = \frac{1}{|N|!}\sum_{\pi} \left[ f(S_k \cup \{i\}) - f(S_k) \right]$$
 
-### Strategic variables
+Raw SHAP magnitudes are standardized against a shuffle-null ensemble to control for feature variance and unit noise, yielding a null-standardized attribution score in units of standard deviations above chance:
 
-- `tslp` — Time since the previous press.
-- `tunp` — Time until the next press.
-- `rew_ratio` — Recent reward ratio associated with the current location.
-- `rew` — Reward outcome of the current press.
-- `choice` — Whether the animal switched to the other location after the press.
-- `last_choice` — Whether the current press followed a recent switch.
-- `rew_rate` — Reward-rate-related task variable used in the preprocessing pipeline.
+$$z_{s,i,t,u} = \frac{\bar{s}_{perm} - \bar{s}_{shuffle}}{\sqrt{(\sigma^2_{perm}+\sigma^2_{shuffle})/2}}$$
 
-### Spatial variables
-
-- `x` — Horizontal position.
-- `y` — Vertical position.
-- `d` — Distance to the nearest reward source or reference point.
-- `motion` — Movement or motion-energy estimate.
-
-These variables are combined into trial-level and time-varying inputs for the conditional mean model.
+Variable selectivity is declared significant only when both an FDR-corrected permutation-versus-shuffle test ($$q<0.05$$) and a minimum standardized-effect-size threshold are satisfied, and significant variables are aggregated into four functional classes: movement, reward prediction, reward outcome, and action planning.
 
 ---
 
-## Preprocessing
-
-The preprocessing pipeline includes:
-
-- MATLAB-based extraction and filtering.
-- Conversion of continuous time into 200-ms bins.
-- Extraction of peri-press neural and behavioral windows.
-- Removal of invalid, incomplete, or non-foraging trials.
-- Rejection of unstable or contaminated units.
-- Removal of trials with missing values or tracking failures.
-- Robust spike outlier detection using median and median absolute deviation.
-- Log transformation of strongly right-skewed interval variables.
-- Standardization using training-set statistics only.
-- Variance stabilization of spike counts using the Anscombe transform.
-- An 80/20 train-validation split with fixed indices reused across model variants.
-
-The preprocessing pipeline is designed to prevent information leakage between training and validation data.
-
----
-
-## Prediction Regimes
-
-Because the model defines a joint Gaussian distribution over units and time bins, it supports several conditional prediction regimes:
-
-- **Mean:** Prediction from the conditional mean alone.
-- **Past:** Conditioning on previous time bins of the same unit.
-- **Others:** Conditioning on other units at the same time bin.
-- **Past and others:** Joint temporal and population conditioning.
-
-These regimes allow the contribution of temporal covariance and cross-unit covariance to be evaluated separately.
-
----
-
-## Evaluation
-
-Model performance is evaluated on held-out trials using:
-
-- Pearson correlation coefficient.
-- Coefficient of determination, \(R^2\).
-- Mean-squared error.
-- Negative log-likelihood.
-- Unit-level comparisons between model variants.
-- Paired statistical tests across validation trials.
-- Benjamini–Hochberg false-discovery-rate correction where multiple comparisons are performed.
-
-The main comparisons are:
-
-1. Baseline versus conditional mean model.
-2. Conditional mean versus mean-covariance model.
-3. Mean-only prediction versus temporal conditioning.
-4. Mean-only prediction versus cross-unit conditioning.
-5. Within-group conditioning versus cross-group conditioning.
-
----
-
-## SHAP Interpretability
-
-SHAP values are used to attribute model-predicted firing to behavioral and spatial variables.
-
-Because exact Shapley-value computation is expensive, the implementation estimates feature contributions using randomly sampled feature permutations. For each permutation, variables are added sequentially and the corresponding changes in predicted activity are accumulated.
-
-The analysis includes:
-
-- Single-trial SHAP explanations.
-- Feature dependence plots.
-- Population-level attribution maps.
-- Feature-ranking plots.
-- Shuffle-null comparisons.
-- Null-standardized SHAP values.
-- Variable-level selectivity.
-- Functional-class selectivity.
-
-Shuffle-null models destroy the trial-level relationship between neural activity and input variables while preserving their marginal distributions. This provides a reference for distinguishing meaningful attribution from attribution that can arise by chance or model flexibility.
-
-SHAP values and covariance structure should be interpreted as model-derived explanations and statistical dependencies. They do not by themselves establish biological causality or anatomical connectivity.
-
----
-
-## Selectivity Analysis
-
-Variable-level selectivity is quantified from trial-averaged absolute null-standardized SHAP values across the peri-event window.
-
-The analysis identifies units that selectively encode individual variables and then groups variables into broader functional classes:
-
-- **Movement:** `x`, `y`, `d`, `motion`.
-- **Reward prediction:** `tslp`, `last_choice`, `rew_ratio`.
-- **Reward outcome:** `rew`.
-- **Action planning:** `tunp`, `choice`.
-
-Selectivity is declared only when both statistical significance and a minimum standardized effect-size criterion are satisfied.
-
-This avoids labeling nearly every unit as selective solely because a very small effect becomes statistically significant in a large analysis.
-
----
-
-## Cross-Group Covariance
-
-Units can be grouped according to reward-prediction and action-planning selectivity:
-
-- Prediction only.
-- Planning only.
-- Both prediction and planning.
-- Neither.
-
-The group-structured covariance analysis asks whether shared variability is organized by functional role rather than by unit identity or firing rate alone.
-
-For an ordered source-target group pair, target activity is predicted from source-group residuals and compared with two baselines:
-
-- **Over mean:** Source-group conditioning compared with the conditional mean alone.
-- **Over within:** Source-group conditioning compared with conditioning on other units within the target group.
-
-Prediction improvement is assessed across held-out trials using paired statistical tests with multiple-comparison correction.
-
-This analysis tests predictive covariance between functional groups. It does not, by itself, establish directed communication or causal influence.
-
----
-
-## Main Figure
+## Figure
 
 <p align="center">
-  <img src="1.jpg" alt="Trained mean-covariance model" width="900">
+  <img src="assets/1.png" alt="Mean and covariance model training and structure" width="800">
 </p>
 
-**Figure 1.** Combined visualization of the trained mean-covariance model. The figure summarizes the fitted conditional mean and the learned latent covariance structure. The mean-model results describe prediction of neural activity, whereas the covariance results show the learned latent loading patterns, temporal length scales, and independent noise structure. The figure is intended as a model characterization and validation summary, not as direct evidence of causal communication between neural populations.
+**Figure 1.** Training and structure of the fitted mean-covariance model. *Top —* optimization trajectory of the conditional mean model, showing training/validation negative log-likelihood, relative loss change, learning-rate schedule, and the resulting distributions of per-unit correlation, $$R^2$$, and MSE. *Bottom —* evolution of the shared covariance-model parameters from random initialization (upper row) to fitted values (lower row): latent covariance loadings across time bins and units (left), temporal length scales for each latent component (middle), and unit- and time-specific independent noise variances (right). Together, these panels show the mean-covariance model learning a low-rank, temporally smooth latent covariance structure on top of the frozen conditional mean.
 
 ---
 
 ## Repository Structure
 
-```text
+```
 mean-cov-model/
-├── mean-cov-model.ipynb       # Main analysis notebook
-├── filter_data.m              # MATLAB data filtering and preparation
-├── data.mat                   # Prepared data file
-├── src/                       # Model and analysis modules
-├── 1.jpg                      # Combined model figure
-└── LICENSE
+├── mean-cov-model.ipynb   # End-to-end notebook: data → mean model → covariance model → SHAP
+├── filter_data.m          # MATLAB preprocessing and trial/unit filtering
+├── data.mat               # Preprocessed spikes, position, and task-variable data
+├── LICENSE
+└── src/
+    ├── classes.py          # Mean, covariance, and joint model class definitions
+    ├── helper_functions.py # Preprocessing, training, SHAP, and selectivity utilities
+    └── plot_functions.py   # Visualization functions for figures above
 ```
 
-Repository links:
-
-- [`mean-cov-model.ipynb`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/mean-cov-model.ipynb)
+Key source files:
+- [`src/`](https://github.com/ZareiShayan/mean-cov-model/tree/real-data/src)
+- [`src/plot_functions.py`](https://github.com/ZareiShayan/mean-cov-model/commit/77e0533b2fa27cdbd0aa2a01b36e103b4f43e283)
 - [`filter_data.m`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/filter_data.m)
 - [`data.mat`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/data.mat)
-- [`src/`](https://github.com/ZareiShayan/mean-cov-model/tree/real-data/src)
+- [`mean-cov-model.ipynb`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/mean-cov-model.ipynb)
 - [`LICENSE`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/LICENSE)
 
 ---
 
-## References
+## Data and References
 
-- Shahidi, N., Franch, M., Parajuli, A., Schrater, P., Wright, A., Pitkow, X., & Dragoi, V. (2024). *Population coding of strategic variables during foraging in freely moving macaques*. **Nature Neuroscience, 27**, 772–781. https://doi.org/10.1038/s41593-024-01575-w
-
-- Burghardt, R. *Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling*. Unpublished M.Sc. thesis, University of Göttingen.
+- **Foraging dataset** — Data and task design follow *"Population coding of strategic variables during foraging in freely moving macaques."*
+- **Covariance modeling approach** — The low-rank, temporally smooth latent covariance formulation builds on Burghardt, R. *"Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling."* MSc Thesis, University of Göttingen (unpublished).
 
 ---
 
 ## Citation
 
-If you use this repository, please cite the dataset paper and methodological reference listed above and link to this repository.
+If you use this code, please cite the foraging dataset paper and the latent-space covariance modeling thesis above, and link to this repository.
 
 ---
 
 ## License
 
-See [`LICENSE`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/LICENSE).
+MIT
