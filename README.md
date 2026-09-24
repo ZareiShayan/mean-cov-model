@@ -26,6 +26,12 @@ $$\Sigma = \sum_k \Lambda_k \Lambda_k^\top + \mathrm{diag}(\sigma^2)$$
 
 Latent loadings are initialized near zero so the model starts close to an identity covariance and gradually learns structure, while the mean model is trained first and then frozen so that the covariance component learns residual structure not already captured by the conditional mean.
 
+<p align="center">
+  <img src="assets/1.PNG" alt="Mean model training and covariance latent structure" width="800">
+</p>
+
+**FIGURE 6.** *Fitted shared covariance-model parameters and the resulting full population covariance matrix after training. The panels show the learned latent covariance loadings, temporal length scales, unit- and time-specific noise variances, and the resulting population covariance structure.*
+
 ---
 
 ## Interpretability
@@ -38,22 +44,11 @@ Because exact Shapley computation is infeasible, the implementation approximates
 
 ---
 
-## Figure
-
-<p align="center">
-  <img src="assets/1.PNG" alt="Mean model training and covariance latent structure" width="800">
-</p>
-
-**FIGURE 6.** *Fitted shared covariance-model parameters and the resulting full population covariance matrix after training. The panels show the learned latent covariance loadings, temporal length scales, unit- and time-specific noise variances, and the resulting population covariance structure.*
-
----
-
 ## Research Questions
 
 1. Does the covariance component provide predictive information about held-out firing rate beyond what the task-variable-dependent mean model already explains?
 2. Are behaviorally relevant units selective for specific strategic variables (movement, reward prediction, reward outcome, action planning), and does this selectivity exceed a shuffle-null baseline?
 3. Is population covariance organized by functional role — e.g., reward-prediction versus action-planning units — rather than by unit identity or anatomy alone?
-4. Does conditioning on one functional group's activity improve prediction of another group's held-out responses beyond what within-group covariance already explains?
 
 ---
 
