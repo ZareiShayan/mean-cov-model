@@ -66,13 +66,10 @@ mean-cov-model/
     └── plot_functions.py   # Visualization and figure-generation functions
 ```
 
-## Data and References
+## References
 
-This project uses data and modeling approaches from the following sources:
-
-- **Population coding of strategic variables during foraging in freely moving macaques** — the primary single-unit dlPFC foraging dataset used in this project.
-
-- **Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling**, Rene Burghardt, MSc Thesis, University of Göttingen (unpublished) — the latent-space covariance modeling framework this project's covariance component builds on.
+- Shahidi N, Franch M, Parajuli A, Schrater P, Wright A, Pitkow X, Dragoi V. (2024). *Population coding of strategic variables during foraging in freely moving macaques.* **Nature Neuroscience**, 27, 772–781. [https://doi.org/10.1038/s41593-024-01575-w](https://doi.org/10.1038/s41593-024-01575-w)
+- Burghardt R. *Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling.* MSc thesis, University of Göttingen. **Unpublished**; cite as a thesis rather than a peer-reviewed paper.
 
 ---
 
