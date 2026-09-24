@@ -68,8 +68,9 @@ mean-cov-model/
 
 ## References
 
-- Shahidi N, Franch M, Parajuli A, Schrater P, Wright A, Pitkow X, Dragoi V. (2024). *Population coding of strategic variables during foraging in freely moving macaques.* **Nature Neuroscience**, 27, 772–781. [https://doi.org/10.1038/s41593-024-01575-w](https://doi.org/10.1038/s41593-024-01575-w)
-- Burghardt R. *Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling.* MSc thesis, University of Göttingen. **Unpublished**; cite as a thesis rather than a peer-reviewed paper.
+- Shahidi N, Franch M, Parajuli A, Schrater P, Wright A, Pitkow X, Dragoi V. (2024). *Population coding of strategic variables during foraging in freely moving macaques.* Nature Neuroscience, 27, 772–781.
+
+- Burghardt R. *Investigating Inter-Area Covariance in the Primate Frontoparietal Reach Network via Latent Space Modelling.* MSc thesis, University of Göttingen. Unpublished; cite as a thesis rather than a peer-reviewed paper.
 
 ---
 
