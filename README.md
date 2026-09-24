@@ -30,7 +30,7 @@ Latent loadings are initialized near zero so the model starts close to an identi
   <img src="assets/1.PNG" alt="Mean model training and covariance latent structure" width="800">
 </p>
 
-**FIGURE 6.** *Fitted shared covariance-model parameters and the resulting full population covariance matrix after training. The panels show the learned latent covariance loadings, temporal length scales, unit- and time-specific noise variances, and the resulting population covariance structure.*
+**FIGURE 1.** *Fitted shared covariance-model parameters and the resulting full population covariance matrix after training. The panels show the learned latent covariance loadings, temporal length scales, unit- and time-specific noise variances, and the resulting population covariance structure.*
 
 ---
 
