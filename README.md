@@ -41,12 +41,10 @@ Because exact Shapley computation is infeasible, the implementation approximates
 ## Figure
 
 <p align="center">
-  <img src="assets/1.png" alt="Mean model training and covariance latent structure" width="800">
+  <img src="assets/1.PNG" alt="Mean model training and covariance latent structure" width="800">
 </p>
 
-**Figure 1.** Trained mean and covariance model summary.
-- **Top — Mean model training and evaluation.** Training and validation negative log-likelihood (NLL) across epochs, relative loss change, and the learning-rate schedule (left), alongside per-unit correlation, $R^2$, and MSE distributions for training and validation trials (right).
-- **Bottom — Covariance latent structure before and after training.** Randomly initialized parameters (upper row) versus fitted values (lower row): latent covariance loadings across time bins and units (left), temporal length scales for the latent components (middle), and unit- and time-specific independent noise variances (right). The shared covariance model represents population covariance as a low-rank, temporally smooth latent process plus diagonal noise; loading magnitudes and signs determine each unit's contribution to each latent component, length scales govern how rapidly latent covariance can change across time, and the noise term captures residual variance not explained by shared latent structure.
+**FIGURE 6.** *Fitted shared covariance-model parameters and the resulting full population covariance matrix after training. The panels show the learned latent covariance loadings, temporal length scales, unit- and time-specific noise variances, and the resulting population covariance structure.*
 
 ---
 
@@ -73,16 +71,6 @@ mean-cov-model/
     └── plot_functions.py   # Visualization and figure-generation functions
 ```
 
-Key source files:
-- [`src/`](https://github.com/ZareiShayan/mean-cov-model/tree/real-data/src)
-- [`src/plot_functions.py`](https://github.com/ZareiShayan/mean-cov-model/commit/77e0533b2fa27cdbd0aa2a01b36e103b4f43e283)
-- [`filter_data.m`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/filter_data.m)
-- [`data.mat`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/data.mat)
-- [`mean-cov-model.ipynb`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/mean-cov-model.ipynb)
-- [`LICENSE`](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/LICENSE)
-
----
-
 ## Data and References
 
 This project uses data and modeling approaches from the following sources:
@@ -96,9 +84,3 @@ This project uses data and modeling approaches from the following sources:
 ## Citation
 
 If you use this code, please cite the two sources above and link to this repository.
-
----
-
-## License
-
-See [LICENSE](https://github.com/ZareiShayan/mean-cov-model/blob/real-data/LICENSE).
