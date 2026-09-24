@@ -21,7 +21,7 @@ events = cell(1, num_sessions);
 unit_names = cell(1, num_sessions);
 channel_names = cell(1, num_sessions);
 unit_types = cell(1, num_sessions);
-task_var_names = {'tunp'; 'tslp'; 'rew_rate'; 'rew_ratio'; 'rew'; 'choice'; 'last_choice'};
+task_var_names = {'tunp'; 'tslp'; 'rew_ratio'; 'rew'; 'choice'; 'last_choice'};
 position_var_names = {'x'; 'y'; 'd'; 'motion'};
 event_names = {'b1_pushed_times'; 'b2_pushed_times'; 'b1_rew'; 'b2_rew'};
 
@@ -33,11 +33,8 @@ for i = 1:num_sessions
     
     tunp_ = [(bPushedTimes{s}(2:end) - bPushedTimes{s}(1:end-1))/1000 NaN];
     tslp_ = [NaN (bPushedTimes{s}(2:end) - bPushedTimes{s}(1:end-1))/1000];
-    
-    idx = iForag{s}( ...
-        tslp_(iForag{s}) > 2 & tslp_(iForag{s}) < 60 );
 
-    num_valid = length(idx);
+    num_valid = length(iForag{s});
 
     b1_rew = double(rew{s} == 1);
     b2_rew = double(rew{s} == 2);
@@ -45,13 +42,12 @@ for i = 1:num_sessions
     rew_ = min(rew{s}, 1);
     last_choice = [NaN choice{s}(1:end-1)];
     var_matrix = [
-        tunp_(idx);
-        tslp_(idx);
-        rewRate{s}(idx);
-        rewRatio{s}(idx);
-        rew_(idx);
-        choice{s}(idx);
-        last_choice(idx);
+        tunp_(iForag{s});
+        tslp_(iForag{s});
+        rewRatio{s}(iForag{s});
+        rew_(iForag{s});
+        choice{s}(iForag{s});
+        last_choice(iForag{s});
     ];
     
     event_matrix = {
@@ -70,12 +66,12 @@ for i = 1:num_sessions
     tbMotion = trialCut(bMotion{s}, round(bPushedTimes{s} / bin_size), pre_dur, post_dur);
     
     position_vars{i} = zeros(num_position_vars, num_valid, size(tbLocX, 2));
-    position_vars{i}(1, :, :) = tbLocX(idx, :);
-    position_vars{i}(2, :, :) = tbLocY(idx, :);
-    position_vars{i}(3, :, :) = tbLocD(idx, :);
-    position_vars{i}(4, :, :) = tbMotion(idx, :);
+    position_vars{i}(1, :, :) = tbLocX(iForag{s}, :);
+    position_vars{i}(2, :, :) = tbLocY(iForag{s}, :);
+    position_vars{i}(3, :, :) = tbLocD(iForag{s}, :);
+    position_vars{i}(4, :, :) = tbMotion(iForag{s}, :);
     
-    spikes{i} = btFr(:, idx, :);
+    spikes{i} = btFr(:, iForag{s}, :);
     unit_names{i} = units;
     channel_names{i} = chan;
     unit_types{i} = unitTypes;
